@@ -93,14 +93,14 @@ object Panels {
     }
 
     /**
-     * One entry, the main TV Settings screen. The picture / sound / date deep links all land in Sony's own
-     * settings activities, and its sound screen never opens for a third-party Home, so none of them is offered.
+     * The Settings button opens the main TV Settings screen directly, with no panel in between. The picture /
+     * sound / date deep links all land in Sony's own settings activities, and its sound screen never opens for
+     * a third-party Home, so none of them is offered. Null when nothing handles it.
      */
-    private fun settings(ctx: Context): List<PanelRow> {
-        val main = mainSettings()
-        if (!resolves(ctx, main)) return listOf(PanelRow("Không mở được Cài đặt", false, null))
-        return listOf(PanelRow("Mở Cài đặt TV…", false, main))
-    }
+    fun settingsIntent(ctx: Context): Intent? = mainSettings().takeIf { resolves(ctx, it) }
+
+    /** Only shown when the main Settings screen could not be opened, so OK never does nothing silently. */
+    private fun settings(ctx: Context): List<PanelRow> = listOf(PanelRow("Không mở được Cài đặt", false, null))
 
     private fun mainSettings() = Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 

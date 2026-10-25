@@ -318,7 +318,11 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
     private fun enter(now: Long) {
         when (state) {
             St.HOME -> {
-                if (homeFocus < 3) return openPanel(buttonKinds[homeFocus], now)
+                if (homeFocus < 3) {
+                    val kind = buttonKinds[homeFocus]
+                    if (kind == PanelKind.SETTINGS && Panels.settingsIntent(context)?.let { host.open(it) } == true) return
+                    return openPanel(kind, now)
+                }
                 val b = homeSpots[homeFocus]
                 launch(dock[homeFocus - 3], RectF(b.x.toFloat(), b.y - 24f, b.x + 224f, b.y + 232f), now)
             }
@@ -392,7 +396,12 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
 
         val text = if (i < 3) buttons[i] else dock[i - 3].name.uppercase(vi)
         if (text != nameFull) {
-            setName(text, (if (i < 3) "Nhấn OK để mở bảng" else "Nhấn OK để chơi") + " · ▼ tất cả ứng dụng")
+            val hint = when {
+                i >= 3 -> "Nhấn OK để chơi"
+                buttonKinds[i] == PanelKind.SETTINGS -> "Nhấn OK để mở cài đặt"
+                else -> "Nhấn OK để mở bảng"
+            }
+            setName(text, "$hint · ▼ tất cả ứng dụng")
             typeAt = now
         }
 

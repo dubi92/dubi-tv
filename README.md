@@ -5,7 +5,7 @@ Custom lightweight Android TV home launcher with its own design and animations, 
 **Dubi TV** is the launcher for a Sony BRAVIA 2015 (Android TV 8.0, API 26, armeabi-v7a, 1.6 GB RAM).
 It draws the approved pixel-art mockup (`data/tvl-design-r3/mockups/b-pixel.html`, spec in `HANDOFF.md`):
 the Da Nang backdrop by time of day, the chibi avatar walking under the focused app, the five dock
-cartridges, the app grid, the HDMI / Wi-Fi / Settings quick panels, the launch overlay, the screensaver,
+cartridges, the app grid, the HDMI / Wi-Fi quick panels, the Settings button (straight to the TV settings), the launch overlay, the screensaver,
 the boot sequence and the weekend Dragon Bridge show.
 
 ## Build
