@@ -1,0 +1,9 @@
+<resources>
+    <!-- Black window from the first frame: no preview flash on a cold start. -->
+    <style name="Launcher" parent="@android:style/Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:colorBackgroundCacheHint">@android:color/black</item>
+    </style>
+</resources>
