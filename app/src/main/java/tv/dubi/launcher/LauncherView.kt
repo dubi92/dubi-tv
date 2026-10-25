@@ -613,7 +613,7 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
 
     /** Updates the clock texts and the time of day; true when anything on screen changed. */
     private fun readClock(): Boolean {
-        val c = Calendar.getInstance()
+        val c = Clock.calendar()
         val t = Clock.time(c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE))
         val d = Clock.date(c.get(Calendar.DAY_OF_WEEK), c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH) + 1)
         val real = Clock.tod(c.get(Calendar.HOUR_OF_DAY))
@@ -625,7 +625,7 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
     }
 
     private fun showTime(): Boolean {
-        val c = Calendar.getInstance()
+        val c = Clock.calendar()
         return Clock.showTime(c.get(Calendar.DAY_OF_WEEK), c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE))
     }
 

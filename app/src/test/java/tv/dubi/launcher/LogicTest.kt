@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Calendar
+import java.util.TimeZone
 
 class NavTest {
     // Home as laid out on the stage: 3 shortcut buttons, then 5 cartridges
@@ -52,6 +53,22 @@ class ClockTest {
         assertFalse(Clock.showTime(Calendar.SUNDAY, 21, 15))
         assertFalse(Clock.showTime(Calendar.FRIDAY, 21, 5))
         assertFalse(Clock.showTime(Calendar.SATURDAY, 20, 59))
+    }
+
+    @Test fun aSydneyDeviceZoneStillShowsVietnamTime() {
+        val device = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("Australia/Sydney"))
+            val c = Clock.calendar(1_792_899_480_000L) // 2026-10-25 03:38 UTC: 14:38 in Sydney, 10:38 in Da Nang
+            assertEquals("10:38", Clock.time(c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE)))
+            assertEquals("Chủ nhật, 25/10", Clock.date(c.get(Calendar.DAY_OF_WEEK), c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH) + 1))
+            // Saturday 21:05 in Vietnam is already Sunday 01:05 in Sydney: the show still runs
+            val show = Clock.calendar(1_792_850_700_000L) // 2026-10-24 14:05 UTC
+            assertTrue(Clock.showTime(show.get(Calendar.DAY_OF_WEEK), show.get(Calendar.HOUR_OF_DAY), show.get(Calendar.MINUTE)))
+            assertEquals(Tod.NIGHT, Clock.tod(show.get(Calendar.HOUR_OF_DAY)))
+        } finally {
+            TimeZone.setDefault(device)
+        }
     }
 
     @Test fun vietnameseDate() {
