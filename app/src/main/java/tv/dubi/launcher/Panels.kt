@@ -11,8 +11,12 @@ import android.provider.Settings
 
 enum class PanelKind { INPUT, WIFI, SETTINGS }
 
-/** A quick-panel row: [on] lights its dot green; OK starts [intent] (null rows are informational). */
-class PanelRow(val text: String, val on: Boolean, val intent: Intent?, val inputId: String? = null)
+/**
+ * A quick-panel row: [on] lights its dot green; OK starts [intent] (null rows are informational). When the
+ * launcher is still in front a moment later, [fallback] opens instead: some vendor screens resolve but never
+ * show for a third-party Home (Sony's sound settings on the BRAVIA 2015).
+ */
+class PanelRow(val text: String, val on: Boolean, val intent: Intent?, val inputId: String? = null, val fallback: Intent? = null)
 
 class Panel(val kind: PanelKind, val title: String, val rows: List<PanelRow>)
 
@@ -44,7 +48,8 @@ object Panels {
             } else {
                 liveTv(ctx) ?: Intent(Intent.ACTION_VIEW, TvContract.buildChannelsUriForInput(info.id))
             }
-            PanelRow(label, info.id == last, intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), info.id)
+            val tv = if (info.isPassthroughInput) liveTv(ctx)?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) else null
+            PanelRow(label, info.id == last, intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), info.id, tv)
         }.filter { resolves(ctx, it.intent!!) }
         if (rows.isNotEmpty()) return rows
         liveTv(ctx)?.let { return listOf(PanelRow("Live TV", false, it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) }
@@ -81,17 +86,23 @@ object Panels {
             net.type == ConnectivityManager.TYPE_ETHERNET -> "Mạng dây · đã kết nối"
             else -> "Đã kết nối mạng"
         }
-        val settings = Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return listOf(PanelRow(status, net?.isConnected == true, settings), PanelRow("Cài đặt Wi-Fi…", false, settings))
+        val main = mainSettings()
+        val wifi = Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).takeIf { resolves(ctx, it) } ?: main
+        val fallback = main.takeIf { wifi !== main }
+        return listOf(PanelRow(status, net?.isConnected == true, wifi, fallback = fallback), PanelRow("Cài đặt Wi-Fi…", false, wifi, fallback = fallback))
     }
 
-    private fun settings(ctx: Context): List<PanelRow> = listOf(
-        "Hình ảnh…" to Settings.ACTION_DISPLAY_SETTINGS,
-        "Âm thanh…" to Settings.ACTION_SOUND_SETTINGS,
-        "Ngày & giờ…" to Settings.ACTION_DATE_SETTINGS,
-        "Tất cả cài đặt…" to Settings.ACTION_SETTINGS,
-    ).map { (text, action) -> PanelRow(text, false, Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        .filter { resolves(ctx, it.intent!!) }
+    /**
+     * One entry, the main TV Settings screen. The picture / sound / date deep links all land in Sony's own
+     * settings activities, and its sound screen never opens for a third-party Home, so none of them is offered.
+     */
+    private fun settings(ctx: Context): List<PanelRow> {
+        val main = mainSettings()
+        if (!resolves(ctx, main)) return listOf(PanelRow("Không mở được Cài đặt", false, null))
+        return listOf(PanelRow("Mở Cài đặt TV…", false, main))
+    }
+
+    private fun mainSettings() = Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     private fun resolves(ctx: Context, intent: Intent) = intent.resolveActivity(ctx.packageManager) != null
 }

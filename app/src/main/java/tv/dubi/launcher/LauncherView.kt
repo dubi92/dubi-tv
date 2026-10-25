@@ -61,8 +61,12 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
     private var lifted = BooleanArray(0)
     private var liftAt = LongArray(0)
     private var bumpAt = -1L
+    /** The focused element's name; [nameText] is what fits in the box. */
+    private var nameFull = ""
     private var nameText = ""
     private var hintText = ""
+    /** Name box width, fitted to its texts so it stays clear of the dragon's head. */
+    private var nameW = 0f
     private var typeAt = 0L
     private var ringFrom = 0
     private var ringTo = 0
@@ -93,6 +97,8 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
     private var panelScroll = 0
     private var tapIdx = -1
     private var tapAt = 0L
+    /** Opened in place of the last panel screen if the launcher is still in front [OPEN_WAIT_MS] later. */
+    private var openFallback: Intent? = null
 
     // ---- Launch overlay
     private var launchApp: AppEntry? = null
@@ -148,7 +154,7 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
     fun onPaused() {
         resumed = false
         syncLoop(now())
-        for (r in arrayOf(saverR, travelR, tick, lightsR, driftR, frameR)) h.removeCallbacks(r)
+        for (r in arrayOf(saverR, travelR, tick, lightsR, driftR, frameR, fallbackR)) h.removeCallbacks(r)
     }
 
     /** HOME pressed while the launcher is already in front: back to Home from anywhere. */
@@ -331,12 +337,27 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
                 h.postDelayed({
                     if (state == St.PANEL && panel === p) {
                         Panels.remember(context, row)
-                        host.open(intent)
+                        open(intent, row.fallback)
                     }
                 }, TAP_MS)
             }
             else -> {}
         }
+    }
+
+    /** Starts a system screen; one that fails or never comes to the front gives way to [fallback]. */
+    private fun open(intent: Intent, fallback: Intent?) {
+        h.removeCallbacks(fallbackR)
+        openFallback = fallback
+        if (!host.open(intent)) fallbackR.run()
+        else if (fallback != null) h.postDelayed(fallbackR, OPEN_WAIT_MS)
+    }
+
+    /** Still resumed means the screen never showed (onPaused cancels this). */
+    private val fallbackR = Runnable {
+        val fb = openFallback ?: return@Runnable
+        openFallback = null
+        if (resumed && state == St.PANEL) host.open(fb)
     }
 
     // ================================================================== states (core.js)
@@ -370,9 +391,8 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         } else if (ringOn) { ringOn = false; ringOnAt = now }
 
         val text = if (i < 3) buttons[i] else dock[i - 3].name.uppercase(vi)
-        if (text != nameText) {
-            nameText = text
-            hintText = (if (i < 3) "Nhấn OK để mở bảng" else "Nhấn OK để chơi") + " · ▼ tất cả ứng dụng"
+        if (text != nameFull) {
+            setName(text, (if (i < 3) "Nhấn OK để mở bảng" else "Nhấn OK để chơi") + " · ▼ tất cả ứng dụng")
             typeAt = now
         }
 
@@ -383,6 +403,14 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
             else if (x != avatar.toX) avatar.walkTo(x, now, 280)
             else if (avatar.isLook(now)) avatar.idle(now)
         }
+    }
+
+    /** A name longer than the box allows is ellipsised; the box ends at [NAME_MAX_W], left of the dragon's head. */
+    private fun setName(name: String, hint: String) {
+        nameFull = name
+        nameText = wrap(name, NAME_MAX_W - 80f, 80f, 1).firstOrNull() ?: ""
+        hintText = hint
+        nameW = min(NAME_MAX_W, max(ink.width(nameText, 80f), ink.width(hintText, 36f)) + 80f)
     }
 
     /** The Home element loses the focus ring (the grid or a panel takes it); the cartridge drops back. */
@@ -519,8 +547,7 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         lifted.fill(false)
         avatar.unplace()
         ringPlaced = false
-        nameText = dock.firstOrNull()?.name?.uppercase(vi) ?: ""
-        hintText = "Nhấn OK để chơi · ▼ tất cả ứng dụng"
+        setName(dock.firstOrNull()?.name?.uppercase(vi) ?: "", "Nhấn OK để chơi · ▼ tất cả ứng dụng")
         typeAt = 0
         bootAt = now()
         setState(St.BOOT)
@@ -680,15 +707,20 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         if (state != St.GRID && state != St.BOOT && avatar.placed) avatar.draw(c, f, 664f, calm)
     }
 
+    /** Shown after every key, then it fades out in 4 steps [NAME_MS] after the last one so the bridge shows again. */
     private fun drawNameBox(c: Canvas, f: Frame) {
         if (nameText.isEmpty()) return
-        ink.pxBox(c, 480f, 320f, 960f, 136f, Pal.K, Pal.W)
+        val fade = f.steps(calmAt - CALM_MS + NAME_MS, 200, 4)
+        if (fade >= 1f) return
+        if (fade > 0f) c.saveLayerAlpha(480f, 320f, 480f + nameW, 456f, ((1 - fade) * 255).toInt())
+        ink.pxBox(c, 480f, 320f, nameW, 136f, Pal.K, Pal.W)
         val k = f.steps(typeAt, 200, 8)
         c.save()
-        c.clipRect(520f, 336f, 520f + 880f * k, 416f)
+        c.clipRect(520f, 336f, 520f + (nameW - 80f) * k, 416f)
         ink.text(c, nameText, 520f, Ink.baseline(336f, 80f), 80f, Pal.W)
         c.restore()
         ink.text(c, hintText, 520f, Ink.baseline(416f, 36f), 36f, Pal.S)
+        if (fade > 0f) c.restore()
     }
 
     private fun drawRow(c: Canvas, f: Frame, calm: Boolean) {
@@ -929,6 +961,10 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         private const val READY_MS = 900L
         private const val LAUNCH_FILL = 300L
         private const val TAP_MS = 220L
+        private const val OPEN_WAIT_MS = 2_000L
+        private const val NAME_MS = 2_500L
+        /** The dragon's head starts near x 1440; the box (from x 480) ends 160 px before it. */
+        private const val NAME_MAX_W = 800f
         private const val DRIFT = 240
         private const val PANEL_ROWS = 4
 

@@ -70,6 +70,14 @@ class StepsTest {
         f.begin(1120); assertEquals(1f, f.steps(1000, 120, 2)); assertEquals(Long.MAX_VALUE, f.wake)
     }
 
+    @Test fun aDelayedStepWakesOnceAtItsStartThenNeverAgain() {
+        // the name box: held for 2.5 s after a key, then a 200 ms fade in 4 steps
+        val f = Frame()
+        f.begin(1000); assertEquals(0f, f.steps(3500, 200, 4)); assertEquals(3500L, f.wake)
+        f.begin(3550); assertEquals(0.25f, f.steps(3500, 200, 4)); assertEquals(3600L, f.wake)
+        f.begin(3700); assertEquals(1f, f.steps(3500, 200, 4)); assertEquals(Long.MAX_VALUE, f.wake)
+    }
+
     @Test fun loopPicksFrameAndNextChange() {
         val f = Frame()
         f.begin(5000)
