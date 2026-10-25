@@ -51,19 +51,17 @@ class Art(private val assets: AssetManager) {
     val gear = sprite(SPR_GEAR)
     val arrow = sprite(SPR_ARROW)
     val arrowR = sprite(SPR_ARROWR)
-    val cat = sprite(SPR_CAT)
 
     companion object {
         private val LIGHTS = arrayOf("", "_blue", "_green", "_rainbow")
 
         // The mockup's 12x12 UI sprites (b-pixel.html SPR) and their palette letters.
-        private val SPR_PAL = mapOf('w' to Pal.W, 'k' to Pal.K, 'y' to Pal.Y, 's' to Pal.S, 'e' to Pal.PE)
+        private val SPR_PAL = mapOf('w' to Pal.W, 'k' to Pal.K, 'y' to Pal.Y, 's' to Pal.S)
         private val SPR_INPUT = arrayOf("............", "ssssssssssss", "s..........s", "s..........s", "s..........s", "s..........s", "ssssssssssss", "....ssss....", "..ssssssss..", "............", "............", "............")
         private val SPR_WIFI = arrayOf("............", "..ssssssss..", ".s........s.", "s..ssssss..s", "..s......s..", "....ssss....", "...s....s...", ".....ss.....", ".....ss.....", "............", "............", "............")
         private val SPR_GEAR = arrayOf(".....ww.....", "..ww.ww.ww..", "..wwwwwwww..", "...ww..ww...", "wwww....wwww", "wwww....wwww", "...ww..ww...", "..wwwwwwww..", "..ww.ww.ww..", ".....ww.....", "............", "............")
         private val SPR_ARROW = arrayOf("yyyyyyyyyy", "kyyyyyyyyk", ".kyyyyyyk.", "..kyyyyk..", "...kyyk...", "....kk....", "..........")
         private val SPR_ARROWR = arrayOf("yk.....", "yyk....", "yyyk...", "yyyyk..", "yyyyyk.", "yyyyk..", "yyyk...", "yyk....", "yk.....", ".......")
-        private val SPR_CAT = arrayOf("........s..s", "........ssss", "s.......skss", ".s..ssssssss", ".sssssssss..", "..ssssssss..", "..s.s..s.s..", "..s.s..s.s..")
 
         fun sprite(rows: Array<String>): Bitmap {
             val w = rows[0].length; val h = rows.size

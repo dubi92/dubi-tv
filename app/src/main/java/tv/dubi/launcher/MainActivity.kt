@@ -30,10 +30,14 @@ class MainActivity : Activity(), LauncherView.Host {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        apps = Apps(this) { if (::view.isInitialized) view.setApps() }
+        // A tile finished pixelising: same layout, just redraw.
+        apps = Apps(this) { if (::view.isInitialized) view.invalidate() }
         apps.reload()
         view = LauncherView(this, apps, this)
         setContentView(view)
+        // The stage paints every pixel; drop the black window fill (it only covers the cold start) so the
+        // GPU does not paint the screen twice per frame.
+        view.post { window.setBackgroundDrawable(null) }
         registerReceiver(packages, IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)

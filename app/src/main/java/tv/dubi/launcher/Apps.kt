@@ -124,7 +124,7 @@ class Apps(private val ctx: Context, private val onChange: () -> Unit) {
     /** Runs on the worker thread: icon -> 16x16 tile, cached as PNG (stale versions removed). */
     private fun pixelize(app: AppEntry): Bitmap {
         // A reload while this batch was queued may already have cached this version.
-        BitmapFactory.decodeFile(tileFile(app).path)?.let { return it }
+        tileFile(app).takeIf { it.exists() }?.let { f -> BitmapFactory.decodeFile(f.path)?.let { return it } }
         val pm = ctx.packageManager
         val icon = pm.getActivityIcon(app.component)
         val side = icon.intrinsicWidth.coerceIn(48, 256)

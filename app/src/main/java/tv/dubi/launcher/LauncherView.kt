@@ -161,7 +161,7 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         invalidate()
     }
 
-    /** The installed apps changed (or tiles finished pixelising): rebuild the dock and the grid. */
+    /** The installed apps changed: rebuild the dock and the grid. */
     fun setApps() {
         dock = apps.dock
         gridApps = apps.grid
@@ -188,8 +188,12 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         liftAt = LongArray(n) { -1000L }
         if (homeFocus >= spots.size) homeFocus = if (n > 0) 3 else 0
         if (homeShown && homeFocus >= 3) lifted[homeFocus - 3] = true
-        ringPlaced = false
-        if (avatar.placed && homeFocus >= 3) avatar.place(avatarX(homeFocus))
+        // cartridges may have moved: the arrow and the avatar jump to the focused one
+        if (homeFocus >= 3) {
+            val x = spots[homeFocus].x
+            ringFrom = x; ringTo = x; ringAt = 0
+            if (avatar.placed) avatar.place(avatarX(homeFocus))
+        } else ringPlaced = false
     }
 
     private fun layoutGrid() {
@@ -633,7 +637,11 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         drawLaunch(c, f)
         c.restore()
         h.removeCallbacks(frameR)
-        if (f.wake != Long.MAX_VALUE) h.postDelayed(frameR, max(0L, f.wake - SystemClock.uptimeMillis()))
+        // Steps from different loops land on a shared 40 ms grid, so they share one frame (25 fps at most).
+        if (f.wake != Long.MAX_VALUE) {
+            val at = (f.wake + FRAME_GRID - 1) / FRAME_GRID * FRAME_GRID
+            h.postDelayed(frameR, max(0L, at - SystemClock.uptimeMillis()))
+        }
     }
 
     private fun drawHome(c: Canvas, f: Frame) {
@@ -829,7 +837,6 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         val d = driftPos(now)
         ink.text(c, timeText, 960f + d[0], Ink.baseline(300f + d[1], 320f, 0.8f), 320f, Pal.Y, 16f, Paint.Align.CENTER)
         ink.text(c, dateText, 960f + d[0], Ink.baseline(556f + d[1], 64f), 64f, Pal.S, 6f, Paint.Align.CENTER)
-        ink.bitmap(c, art.cat, 1680f, 976f, 8)
         avatar.drawSleep(c, f, 1328f, 664f, saverAt)
         // "z" and a bigger "Z" float off every 1.2 s: 2.4 s rise in 6 steps, fading in by 20 %
         for (k in 0..1) {
@@ -907,6 +914,7 @@ class LauncherView(context: Context, private val apps: Apps, private val host: H
         const val STAGE_W = 1920f
         const val STAGE_H = 1080f
 
+        private const val FRAME_GRID = 40L
         private const val CALM_MS = 5_000L
         private const val TRAVEL_MS = 3_000L
         private const val SAVER_MS = 5 * 60_000L
